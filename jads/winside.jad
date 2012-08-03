@@ -1,0 +1,10 @@
+price: 1/3/5/10
+username: 2012060605888
+userid: 2012060605888
+product: ${appName}
+checkKey: rkONetpI5N1amFCGRbPHHq0zZQajmvep
+loginurl: ${server}
+buyURL: http://113.106.54.36:8008/games/newsanguo
+userToken: 111
+gameid: 111
+spid: 111
