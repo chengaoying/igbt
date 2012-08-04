@@ -3,55 +3,20 @@ apply plugin: 'idea'
 apply plugin: 'eclipse'
 apply plugin: 'maven'
 
-final env = System.getenv()
+ext.env = System.getenv()
 
 sourceCompatibility = '1.3'
 targetCompatibility = '1.1'
-
-configurations {
-	allInOne
-	publish
-	wtkProvide
-	refProvide
-	compile.extendsFrom(refProvide)
-	compile.extendsFrom(wtkProvide)
-}
-
-repositories {
-	flatDir name: 'wtk', dirs: "${env.WTK_HOME}/lib"
-	mavenLocal()
-	maven {
-		url 'http://localhost:8000/nexus/content/groups/public/'
-	}
-	//mavenCentral()
-}
-
-dependencies {
-	wtkProvide ':cldcapi11:@jar'
-	wtkProvide ':midpapi20:@jar'
-}
-
-compileJava {
-	options.encoding = 'gbk'
-	options.bootClasspath = configurations.wtkProvide.inject(""){a, b -> a+b+':'}
-}
-
-task preverify(type: Exec) {
-	dependsOn compileJava
-	destinationDir = "${buildDir}/iptv/classes"
-	executable "${env.WTK_HOME}/bin/preverify"
-	args '-classpath', configurations.compile.inject(""){a, b -> a+b+';'}
-	args '-d', destinationDir
-	args '-target', 'CLDC1.1'
-	args compileJava.destinationDir
-}
+group = validprop('jme.group')
+archivesBaseName = property('jme.archivesBaseName')
+version = validprop('jme.version')
 
 def validprop(name) {
 	if (hasProperty(name)) {
 		property(name)
 	}
 	else {
-		""
+		''
 	}
 }
 
@@ -66,11 +31,61 @@ def renderTemplateFile(f, binding) {
 	renderTemplate(text, binding)
 }
 
+def writeAppDesc(f) {
+	def file = f instanceof File ? f : file(f)
+	file.write """MIDlet-Version: 1.0.0
+MIDlet-Vendor: MIDlet Suite Vendor
+MIDlet-Jar-URL: ${uberjme.archiveName}
+MicroEdition-Configuration: CLDC-1.1
+MicroEdition-Profile: MIDP-2.0
+MIDlet-Name: ${archivesBaseName} MIDlet Suite
+"""
+	if (hasProperty('midlet')) {
+		file.append("MIDlet-1: ${archivesBaseName}MIDlet,,${midlet}\r\n")
+	}
+}
+
+def jadName(name) {
+	name[0..<name.length()-1]+"d"
+}
+
+configurations {
+	wtkProvide
+	compile.extendsFrom(wtkProvide)
+}
+
+repositories {
+	flatDir name: 'wtk', dirs: "${env.WTK_HOME}/lib"
+	mavenLocal()
+}
+
+dependencies {
+	wtkProvide ':cldcapi11:@jar'
+	wtkProvide ':midpapi20:@jar'
+}
+
+compileJava {
+	if (hasProperty('srcEncoding')) {
+		options.encoding = srcEncoding
+	}
+	options.bootClasspath = configurations.wtkProvide.inject(""){a, b -> a+b+':'}
+}
+
+task preverify(type: Exec) {
+	dependsOn compileJava
+	ext.destinationPath = "${buildDir}/iptv/classes"
+	executable "${env.WTK_HOME}/bin/preverify"
+	args '-classpath', configurations.compile.inject(""){a, b -> a+b+';'}
+	args '-d', destinationPath
+	args '-target', 'CLDC1.1'
+	args compileJava.destinationDir
+}
+
 task configjme {
 	onlyIf {
 		hasProperty('telcom')&&hasProperty('sp')&&hasProperty('midlet')
 	}
-	binding = project.properties
+	ext.binding = project.properties
 }
 
 configjme << {
@@ -92,24 +107,10 @@ task resjme(type: Copy) {
   into "${buildDir}/iptv/resources"
 }
 
-def writeAppDesc(f) {
-	def file = f instanceof File ? f : file(f)
-	file.write """MIDlet-Version: 1.0.0
-MIDlet-Vendor: MIDlet Suite Vendor
-MIDlet-Jar-URL: ${uberjme.archiveName}
-MicroEdition-Configuration: CLDC-1.1
-MicroEdition-Profile: MIDP-2.0
-MIDlet-Name: ${archivesBaseName} MIDlet Suite
-"""
-	if (hasProperty('midlet')) {
-		file.append("MIDlet-1: ${archivesBaseName}MIDlet,,${midlet}\r\n")
-	}
-}
-
 task jarjme(type: Jar) {
 	dependsOn preverify
   dependsOn resjme
-	from preverify.destinationDir
+	from preverify.destinationPath
 	from resjme.destinationDir
 	destinationDir = file("${buildDir}/iptv/jar")
 }
@@ -118,15 +119,15 @@ task uberjme(type: Jar) {
 	dependsOn preverify
   dependsOn resjme
 	from configurations.refProvide.collect { it.isDirectory() ? it : zipTree(it) }
-	from preverify.destinationDir
+	from preverify.destinationPath
 	from resjme.destinationDir
 	destinationDir = file("${buildDir}/iptv/uberjar")
 }
 
 task obfuscate(type: Exec) {
 	dependsOn uberjme
-	destinationPath = "${buildDir}/iptv/publish"
-	archivePath = destinationPath+"/"+uberjme.archiveName
+	ext.destinationPath = "${buildDir}/iptv/publish"
+	ext.archivePath = destinationPath+"/"+uberjme.archiveName
 	executable "${env.PROGUARD_HOME}/bin/proguard.bat"
 	args '-injars', uberjme.archivePath
 	args '-outjars', archivePath
@@ -137,15 +138,12 @@ task obfuscate(type: Exec) {
 	args '-keep', 'public class * extends javax.microedition.midlet.MIDlet'
 }
 
-def jadName(name) {
-	name[0..<name.length]+"d"
-}
-
 task jadjme {
-	jadName = jadName(uberjme.archiveName)
-	jadPath = jadName(obfuscate.archivePath)
+	dependsOn obfuscate
+	ext.jadName = jadName(uberjme.archiveName)
+	ext.jadPath = jadName(obfuscate.archivePath)
 	doLast {
-		writeAppDesc(obfuscate.destinationDir)
+		writeAppDesc(jadPath)
 	}
 }
 
@@ -167,61 +165,15 @@ task testjme(type: JavaExec) {
 
 task pngout(type: Exec) {
 	executable "${env.SGBT_HOME}/bin/pngout.bat"
-	args sourceSets.main.resources.srcDir
+	sourceSets.main.resources.srcDirs.each{ args it }
 }
 
 artifacts {
-  archives jarjme.archivePath
-  allInOne uberjme.archivePath
-  publish obfuscate.archivePath
+  archives uberjme.archivePath
 }
 
 uploadArchives {
-	dependsOn jarjme
-	repositories {
-    mavenDeployer {
-  		if (validprop('releaseRepos')) {
-        repository(url: releaseRepos) {
-        	if (validprop('releaseReposUser')&&validprop('releaseReposPasswd')) {
-        		authentication(userName: releaseReposUser, password: releaseReposPasswd)
-        	}
-        }
-      }
-      if (validprop('snapshotRepos')) {
-        snapshotRepository(url: snapshotRepos) {
-        	if (validprop('snapshotReposUser')&&validprop('snapshotReposPasswd')) {
-        		authentication(userName: snapshotReposUser, password: snapshotReposPasswd)
-        	}
-        }
-      }
-    }
-  }
-}
-
-uploadAllInOne {
 	dependsOn uberjme
-	repositories {
-    mavenDeployer {
-  		if (validprop('releaseRepos')) {
-        repository(url: releaseRepos) {
-        	if (validprop('releaseReposUser')&&validprop('releaseReposPasswd')) {
-        		authentication(userName: releaseReposUser, password: releaseReposPasswd)
-        	}
-        }
-      }
-      if (validprop('snapshotRepos')) {
-        snapshotRepository(url: snapshotRepos) {
-        	if (validprop('snapshotReposUser')&&validprop('snapshotReposPasswd')) {
-        		authentication(userName: snapshotReposUser, password: snapshotReposPasswd)
-        	}
-        }
-      }
-    }
-  }
-}
-
-uploadPublish {
-	dependsOn obfuscate
 	repositories {
     mavenDeployer {
   		if (validprop('releaseRepos')) {
