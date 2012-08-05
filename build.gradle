@@ -96,13 +96,13 @@ task resjme(type: Copy) {
 resjme << {
 	if (project.hasProperty('telcom')&&project.hasProperty('sp')&&project.hasProperty('midlet')) {
 		mkdir(confDir)
-		if (file("${env.SGBT_HOME}/conf/${telcom}-${sp}.conf").exists()) {
-			def text = renderTemplateFile("${env.SGBT_HOME}/conf/${telcom}-${sp}.conf", props)
+		if (file("${env.IGBT_HOME}/conf/${telcom}-${sp}.conf").exists()) {
+			def text = renderTemplateFile("${env.IGBT_HOME}/conf/${telcom}-${sp}.conf", props)
 			file(confPath).write(text)
 		}
 		else {
-			def text1 = renderTemplateFile("${env.SGBT_HOME}/conf/${telcom}.conf", props)
-			def text2 = renderTemplateFile("${env.SGBT_HOME}/conf/${sp}.conf", props)
+			def text1 = renderTemplateFile("${env.IGBT_HOME}/conf/${telcom}.conf", props)
+			def text2 = renderTemplateFile("${env.IGBT_HOME}/conf/${sp}.conf", props)
 			file(confPath).write(text1+text2)
 		}
 	}
@@ -164,12 +164,12 @@ task testjme {
 
 testjme << {
 	if (project.hasProperty('telcom')&&project.hasProperty('sp')&&project.hasProperty('midlet')) {
-		if (file("${env.SGBT_HOME}/jads/${telcom}-${sp}.jad").exists()) {
-			def text = renderTemplateFile("${env.SGBT_HOME}/jads/${telcom}-${sp}.jad", props)
+		if (file("${env.IGBT_HOME}/jads/${telcom}-${sp}.jad").exists()) {
+			def text = renderTemplateFile("${env.IGBT_HOME}/jads/${telcom}-${sp}.jad", props)
 			file(uberjme.jadPath).append(text)
 		}
 		else {
-			def text = renderTemplateFile("${env.SGBT_HOME}/jads/${sp}.jad", props)
+			def text = renderTemplateFile("${env.IGBT_HOME}/jads/${sp}.jad", props)
 			file(uberjme.jadPath).append(text)
 		}
 	}
@@ -180,14 +180,14 @@ testjme << {
 		arg(value: '--resizableDevice 640 530')
 		arg(value: uberjme.jadPath)
 		classpath {
-			pathelement(location: "${env.SGBT_HOME}/libs/microemulator.jar")
+			pathelement(location: "${env.IGBT_HOME}/libs/microemulator.jar")
 			pathelement(location: uberjme.archivePath)
 		}
 	}
 }
 
 task pngout(type: Exec) {
-	executable "${env.SGBT_HOME}/bin/pngout.bat"
+	executable "${env.IGBT_HOME}/bin/pngout.bat"
 	sourceSets.main.resources.srcDirs.each{ args it }
 }
 
