@@ -4,16 +4,19 @@ apply plugin: 'eclipse'
 apply plugin: 'maven'
 
 ext.env = System.getenv()
+ext.props = project.properties
 
 sourceCompatibility = '1.3'
 targetCompatibility = '1.1'
-group = validprop('jme.group')
-archivesBaseName = property('jme.archivesBaseName')
-version = validprop('jme.version')
+group = validprop('jmeGroup')
+archivesBaseName = property('jmeArchivesBaseName')
+version = validprop('jmeVersion')
+
+defaultTasks 'uberjme'
 
 def validprop(name) {
-	if (hasProperty(name)) {
-		property(name)
+	if (project.hasProperty(name)) {
+		project.property(name)
 	}
 	else {
 		''
@@ -40,13 +43,14 @@ MicroEdition-Configuration: CLDC-1.1
 MicroEdition-Profile: MIDP-2.0
 MIDlet-Name: ${archivesBaseName} MIDlet Suite
 """
-	if (hasProperty('midlet')) {
+	if (project.hasProperty('midlet')) {
 		file.append("MIDlet-1: ${archivesBaseName}MIDlet,,${midlet}\r\n")
 	}
 }
 
 def jadName(name) {
-	name[0..<name.length()-1]+"d"
+	def str = name.toString()
+	str[0..<str.length()-1]+"d"
 }
 
 configurations {
@@ -65,7 +69,7 @@ dependencies {
 }
 
 compileJava {
-	if (hasProperty('srcEncoding')) {
+	if (project.hasProperty('srcEncoding')) {
 		options.encoding = srcEncoding
 	}
 	options.bootClasspath = configurations.wtkProvide.inject(""){a, b -> a+b+':'}
@@ -81,30 +85,27 @@ task preverify(type: Exec) {
 	args compileJava.destinationDir
 }
 
-task configjme {
-	onlyIf {
-		hasProperty('telcom')&&hasProperty('sp')&&hasProperty('midlet')
-	}
-	ext.binding = project.properties
-}
-
-configjme << {
-	if (file("${env.SGBT_HOME}/conf/${telcom}-${sp}.conf").exists()) {
-		def text = renderTemplateFile("${env.SGBT_HOME}/conf/${telcom}-${sp}.conf", binding)
-		file("${buildDir}/iptv/resources/conf/game.conf").write(text)
-	}
-	else {
-		def text1 = renderTemplateFile("${env.SGBT_HOME}/conf/${telcom}.conf", binding)
-		def text2 = renderTemplateFile("${env.SGBT_HOME}/conf/${sp}.conf", binding)
-		file("${buildDir}/iptv/resources/conf/game.conf").write(text1+text2)
-	}
-}
-
 task resjme(type: Copy) {
-	dependsOn configjme
   dependsOn processResources
   from processResources.destinationDir
   into "${buildDir}/iptv/resources"
+  ext.confDir = "$destinationDir/conf"
+  ext.confPath = "$confDir/game.conf"
+}
+
+resjme << {
+	if (project.hasProperty('telcom')&&project.hasProperty('sp')&&project.hasProperty('midlet')) {
+		mkdir(confDir)
+		if (file("${env.SGBT_HOME}/conf/${telcom}-${sp}.conf").exists()) {
+			def text = renderTemplateFile("${env.SGBT_HOME}/conf/${telcom}-${sp}.conf", props)
+			file(confPath).write(text)
+		}
+		else {
+			def text1 = renderTemplateFile("${env.SGBT_HOME}/conf/${telcom}.conf", props)
+			def text2 = renderTemplateFile("${env.SGBT_HOME}/conf/${sp}.conf", props)
+			file(confPath).write(text1+text2)
+		}
+	}
 }
 
 task jarjme(type: Jar) {
@@ -122,6 +123,11 @@ task uberjme(type: Jar) {
 	from preverify.destinationPath
 	from resjme.destinationDir
 	destinationDir = file("${buildDir}/iptv/uberjar")
+	ext.jadName = jadName(uberjme.archiveName)
+	ext.jadPath = jadName(uberjme.archivePath)
+	doLast {
+		writeAppDesc(jadPath)
+	}
 }
 
 task obfuscate(type: Exec) {
@@ -136,31 +142,48 @@ task obfuscate(type: Exec) {
 	args '-overloadaggressively'
 	args '-microedition'
 	args '-keep', 'public class * extends javax.microedition.midlet.MIDlet'
-}
-
-task jadjme {
-	dependsOn obfuscate
-	ext.jadName = jadName(uberjme.archiveName)
-	ext.jadPath = jadName(obfuscate.archivePath)
 	doLast {
-		writeAppDesc(jadPath)
+		copy {
+			from uberjme.jadPath
+			into destinationPath
+		}
 	}
 }
 
 task publish {
 	dependsOn obfuscate
-	dependsOn jadjme
+	doLast {
+	
+	}
 }
 
-task testjme(type: JavaExec) {
+task testjme {
 	dependsOn test
 	dependsOn uberjme
-	dependsOn jadjme
-	main = "org.microemu.app.Main"
-	args '--resizableDevice 640 530'
-	args jadjme.jadPath
-	classpath "${env.SGBT_HOME}/lib/microemulator.jar"
-	classpath uberjme.archivePath
+}
+
+testjme << {
+	if (project.hasProperty('telcom')&&project.hasProperty('sp')&&project.hasProperty('midlet')) {
+		if (file("${env.SGBT_HOME}/jads/${telcom}-${sp}.jad").exists()) {
+			def text = renderTemplateFile("${env.SGBT_HOME}/jads/${telcom}-${sp}.jad", props)
+			file(uberjme.jadPath).append(text)
+		}
+		else {
+			def text = renderTemplateFile("${env.SGBT_HOME}/jads/${sp}.jad", props)
+			file(uberjme.jadPath).append(text)
+		}
+	}
+}
+
+testjme << {
+	ant.java(classname: 'org.microemu.app.Main', fork: true, spawn: true) {
+		arg(value: '--resizableDevice 640 530')
+		arg(value: uberjme.jadPath)
+		classpath {
+			pathelement(location: "${env.SGBT_HOME}/libs/microemulator.jar")
+			pathelement(location: uberjme.archivePath)
+		}
+	}
 }
 
 task pngout(type: Exec) {
