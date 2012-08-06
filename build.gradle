@@ -54,6 +54,7 @@ def jadName(name) {
 }
 
 configurations {
+	jme
 	wtkProvide
 	compile.extendsFrom(wtkProvide)
 }
@@ -192,10 +193,10 @@ task pngout(type: Exec) {
 }
 
 artifacts {
-  archives uberjme.archivePath
+  jme uberjme.archivePath
 }
 
-uploadArchives {
+uploadJme {
 	dependsOn uberjme
 	repositories {
     mavenDeployer {
