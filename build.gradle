@@ -36,13 +36,12 @@ def renderTemplateFile(f, binding) {
 
 def writeAppDesc(f) {
 	def file = f instanceof File ? f : file(f)
-	file.write """MIDlet-Version: 1.0.0
-MIDlet-Vendor: MIDlet Suite Vendor
-MIDlet-Jar-URL: ${uberjme.archiveName}
-MicroEdition-Configuration: CLDC-1.1
-MicroEdition-Profile: MIDP-2.0
-MIDlet-Name: ${archivesBaseName} MIDlet Suite
-"""
+	file.write("MIDlet-Version: 1.0.0\r\n")
+	file.append("MIDlet-Vendor: MIDlet Suite Vendor\r\n")
+	file.append("MIDlet-Jar-URL: ${uberjme.archiveName}\r\n")
+	file.append("MicroEdition-Configuration: CLDC-1.1\r\n")
+	file.append("MicroEdition-Profile: MIDP-2.0\r\n")
+	file.append("MIDlet-Name: ${archivesBaseName} MIDlet Suite\r\n")
 	if (project.hasProperty('midlet')) {
 		file.append("MIDlet-1: ${archivesBaseName}MIDlet,,${midlet}\r\n")
 	}
