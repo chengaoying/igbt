@@ -12,7 +12,7 @@ group = validprop('jmeGroup')
 archivesBaseName = property('jmeArchivesBaseName')
 version = validprop('jmeVersion')
 
-defaultTasks 'uberjme'
+defaultTasks 'helpJme'
 
 def validprop(name) {
 	if (project.hasProperty(name)) {
@@ -21,6 +21,10 @@ def validprop(name) {
 	else {
 		''
 	}
+}
+
+def isMidlet() {
+	project.hasProperty('telcom')&&project.hasProperty('sp')&&project.hasProperty('midlet')
 }
 
 def renderTemplate(text, binding) {
@@ -38,7 +42,7 @@ def writeAppDesc(f) {
 	def file = f instanceof File ? f : file(f)
 	file.write("MIDlet-Version: 1.0.0\r\n")
 	file.append("MIDlet-Vendor: MIDlet Suite Vendor\r\n")
-	file.append("MIDlet-Jar-URL: ${uberjme.archiveName}\r\n")
+	file.append("MIDlet-Jar-URL: ${uberJme.archiveName}\r\n")
 	file.append("MicroEdition-Configuration: CLDC-1.1\r\n")
 	file.append("MicroEdition-Profile: MIDP-2.0\r\n")
 	file.append("MIDlet-Name: ${archivesBaseName} MIDlet Suite\r\n")
@@ -85,7 +89,18 @@ task preverify(type: Exec) {
 	args compileJava.destinationDir
 }
 
-task resjme(type: Copy) {
+task cleanConf {
+	dependsOn processResources
+}
+
+cleanConf << {
+	if (isMidlet()) {
+  	delete resJme.confPath
+  }
+}
+
+task resJme(type: Copy) {
+	dependsOn cleanConf
   dependsOn processResources
   from processResources.destinationDir
   into "${buildDir}/iptv/resources"
@@ -93,49 +108,56 @@ task resjme(type: Copy) {
   ext.confPath = "$confDir/game.conf"
 }
 
-resjme << {
-	if (project.hasProperty('telcom')&&project.hasProperty('sp')&&project.hasProperty('midlet')) {
-		mkdir(confDir)
+resJme << {
+	if (isMidlet()) {
 		if (file("${env.IGBT_HOME}/conf/${telcom}-${sp}.conf").exists()) {
 			def text = renderTemplateFile("${env.IGBT_HOME}/conf/${telcom}-${sp}.conf", props)
-			file(confPath).write(text)
+			file(confPath).write(text.denormalize())
 		}
 		else {
 			def text1 = renderTemplateFile("${env.IGBT_HOME}/conf/${telcom}.conf", props)
 			def text2 = renderTemplateFile("${env.IGBT_HOME}/conf/${sp}.conf", props)
-			file(confPath).write(text1+text2)
+			file(confPath).write((text1+text2).denormalize())
 		}
 	}
 }
 
-task jarjme(type: Jar) {
+task jarJme(type: Jar) {
 	dependsOn preverify
-  dependsOn resjme
+  dependsOn resJme
 	from preverify.destinationPath
-	from resjme.destinationDir
+	from resJme.destinationDir
 	destinationDir = file("${buildDir}/iptv/jar")
 }
 
-task uberjme(type: Jar) {
+task cleanJme << {
+	if (isMidlet()) {
+  	delete uberJme.jadPath
+  	delete uberJme.archivePath
+  }
+}
+
+task uberJme(type: Jar) {
+	dependsOn cleanJme
 	dependsOn preverify
-  dependsOn resjme
+  dependsOn resJme
 	from configurations.refProvide.collect { it.isDirectory() ? it : zipTree(it) }
 	from preverify.destinationPath
-	from resjme.destinationDir
+	from resJme.destinationDir
 	destinationDir = file("${buildDir}/iptv/uberjar")
-	ext.jadName = jadName(uberjme.archiveName)
-	ext.jadPath = jadName(uberjme.archivePath)
+	ext.jadName = jadName(uberJme.archiveName)
+	ext.jadPath = jadName(uberJme.archivePath)
 	doLast {
 		writeAppDesc(jadPath)
 	}
 }
 
 task obfuscate(type: Exec) {
-	dependsOn uberjme
+	dependsOn uberJme
 	ext.destinationPath = "${buildDir}/iptv/publish"
-	ext.archivePath = destinationPath+"/"+uberjme.archiveName
+	ext.archivePath = destinationPath+"/"+uberJme.archiveName
 	executable "${env.PROGUARD_HOME}/bin/proguard.bat"
-	args '-injars', uberjme.archivePath
+	args '-injars', uberJme.archivePath
 	args '-outjars', archivePath
 	configurations.wtkProvide.each {args '-libraryjars', it }
 	args "-repackageclasses ''"
@@ -144,44 +166,52 @@ task obfuscate(type: Exec) {
 	args '-keep', 'public class * extends javax.microedition.midlet.MIDlet'
 	doLast {
 		copy {
-			from uberjme.jadPath
+			from uberJme.jadPath
 			into destinationPath
 		}
 	}
 }
 
-task publish {
+task publishJme {
 	dependsOn obfuscate
 	doLast {
-	
+		if (isMidlet()) {
+			def prefix = "${telcom}-${sp}-${archivesBaseName}"
+			def nowStr = new Date().format('yyMMdd-HHmm')
+			def destfile = "${obfuscate.destinationPath}/${prefix}-${nowStr}.zip"
+			ant.zip(destfile: destfile, basedir: obfuscate.destinationPath) {
+				include(name: uberJme.archiveName)
+				include(name: uberJme.jadName)
+			}
+		}
 	}
 }
 
-task testjme {
+task testJme {
 	dependsOn test
-	dependsOn uberjme
+	dependsOn uberJme
 }
 
-testjme << {
-	if (project.hasProperty('telcom')&&project.hasProperty('sp')&&project.hasProperty('midlet')) {
+testJme << {
+	if (isMidlet()) {
 		if (file("${env.IGBT_HOME}/jads/${telcom}-${sp}.jad").exists()) {
 			def text = renderTemplateFile("${env.IGBT_HOME}/jads/${telcom}-${sp}.jad", props)
-			file(uberjme.jadPath).append(text)
+			file(uberJme.jadPath).append(text.denormalize())
 		}
 		else {
 			def text = renderTemplateFile("${env.IGBT_HOME}/jads/${sp}.jad", props)
-			file(uberjme.jadPath).append(text)
+			file(uberJme.jadPath).append(text.denormalize())
 		}
 	}
 }
 
-testjme << {
+testJme << {
 	ant.java(classname: 'org.microemu.app.Main', fork: true, spawn: true) {
 		arg(value: '--resizableDevice 640 530')
-		arg(value: uberjme.jadPath)
+		arg(value: uberJme.jadPath)
 		classpath {
 			pathelement(location: "${env.IGBT_HOME}/libs/microemulator.jar")
-			pathelement(location: uberjme.archivePath)
+			pathelement(location: uberJme.archivePath)
 		}
 	}
 }
@@ -191,12 +221,28 @@ task pngout(type: Exec) {
 	sourceSets.main.resources.srcDirs.each{ args it }
 }
 
+task helpJme << {
+	println "task list:"
+	println "--------------------------------------------------------------------------------------"
+	println "clean:      clean build fils"
+	println "uberJme:    create unobfuscated JAR, and standard JAD"
+	println "publishJme: create obfuscated JAR, standard JAD, and zip together"
+	println "testJme:    create unobfuscated JAR, add testing parameters to JAD, and launch MicroEmulator for testing JAR"
+	println "uploadJme:  upload JAR to maven repository, can only be used by common component, such as 'itvgame-common'"
+	println "pngout:     compress png files"
+	println "idea:       generate config files for IDEA"
+	println "eclipse:    generate config files for eclipse"
+	println "mtj:        generate config files for eclipse and mtj plugin"
+	println "helpJme:    show this message"
+	println "--------------------------------------------------------------------------------------"
+}
+
 artifacts {
-  jme uberjme.archivePath
+  jme uberJme.archivePath
 }
 
 uploadJme {
-	dependsOn uberjme
+	dependsOn uberJme
 	repositories {
     mavenDeployer {
   		if (validprop('releaseRepos')) {
