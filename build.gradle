@@ -15,12 +15,7 @@ version = validprop('jmeVersion')
 defaultTasks 'helpJme'
 
 def validprop(name) {
-	if (project.hasProperty(name)) {
-		project.property(name)
-	}
-	else {
-		''
-	}
+	project.hasProperty(name)?project.property(name):''
 }
 
 def isMidlet() {
@@ -82,6 +77,8 @@ compileJava {
 task preverify(type: Exec) {
 	dependsOn compileJava
 	ext.destinationPath = "${buildDir}/iptv/classes"
+	inputs.dir compileJava.destinationDir
+	outputs.dir destinationPath
 	executable "${env.WTK_HOME}/bin/preverify"
 	args '-classpath', configurations.compile.inject(""){a, b -> a+b+';'}
 	args '-d', destinationPath
@@ -89,73 +86,68 @@ task preverify(type: Exec) {
 	args compileJava.destinationDir
 }
 
-task cleanConf {
-	dependsOn processResources
-}
-
-cleanConf << {
-	if (isMidlet()) {
-  	delete resJme.confPath
-  }
-}
-
 task resJme(type: Copy) {
-	dependsOn cleanConf
   dependsOn processResources
   from processResources.destinationDir
   into "${buildDir}/iptv/resources"
-  ext.confDir = "$destinationDir/conf"
-  ext.confPath = "$confDir/game.conf"
 }
 
-resJme << {
+task createConf {
+	dependsOn resJme
+	ext.confDir = "${resJme.destinationDir}/conf"
+  ext.confPath = "$confDir/game.conf"
+	inputs.property 'telcom', validprop('telcom')
+	inputs.property 'sp', validprop('sp')
+	outputs.file confPath
+}
+
+createConf << {
 	if (isMidlet()) {
 		if (file("${env.IGBT_HOME}/conf/${telcom}-${sp}.conf").exists()) {
 			def text = renderTemplateFile("${env.IGBT_HOME}/conf/${telcom}-${sp}.conf", props)
+			mkdir confDir
 			file(confPath).write(text.denormalize())
 		}
 		else {
 			def text1 = renderTemplateFile("${env.IGBT_HOME}/conf/${telcom}.conf", props)
 			def text2 = renderTemplateFile("${env.IGBT_HOME}/conf/${sp}.conf", props)
+			mkdir confDir
 			file(confPath).write((text1+text2).denormalize())
 		}
 	}
 }
 
-task jarJme(type: Jar) {
-	dependsOn preverify
-  dependsOn resJme
-	from preverify.destinationPath
-	from resJme.destinationDir
-	destinationDir = file("${buildDir}/iptv/jar")
-}
-
-task cleanJme << {
-	if (isMidlet()) {
-  	delete uberJme.jadPath
-  	delete uberJme.archivePath
-  }
-}
-
 task uberJme(type: Jar) {
-	dependsOn cleanJme
 	dependsOn preverify
-  dependsOn resJme
+  dependsOn createConf
 	from configurations.refProvide.collect { it.isDirectory() ? it : zipTree(it) }
 	from preverify.destinationPath
 	from resJme.destinationDir
 	destinationDir = file("${buildDir}/iptv/uberjar")
+}
+
+task createJad {
+	dependsOn uberJme
 	ext.jadName = jadName(uberJme.archiveName)
 	ext.jadPath = jadName(uberJme.archivePath)
-	doLast {
-		writeAppDesc(jadPath)
-	}
+	inputs.property 'telcom', validprop('telcom')
+	inputs.property 'sp', validprop('sp')
+	inputs.property 'midlet', validprop('midlet')
+	outputs.file jadPath
+}
+
+createJad << {
+	writeAppDesc(createJad.jadPath)
 }
 
 task obfuscate(type: Exec) {
 	dependsOn uberJme
-	ext.destinationPath = "${buildDir}/iptv/publish"
-	ext.archivePath = destinationPath+"/"+uberJme.archiveName
+	ext.destinationDir = "${buildDir}/iptv/publish"
+	ext.archivePath = destinationDir+"/"+uberJme.archiveName
+	
+	inputs.file uberJme.archivePath
+	outputs.file archivePath
+	
 	executable "${env.PROGUARD_HOME}/bin/proguard.bat"
 	args '-injars', uberJme.archivePath
 	args '-outjars', archivePath
@@ -164,54 +156,71 @@ task obfuscate(type: Exec) {
 	args '-overloadaggressively'
 	args '-microedition'
 	args '-keep', 'public class * extends javax.microedition.midlet.MIDlet'
-	doLast {
-		copy {
-			from uberJme.jadPath
-			into destinationPath
-		}
-	}
+}
+
+task copyPubJad(type: Copy) {
+	dependsOn createJad
+	from createJad.jadPath
+	into obfuscate.destinationDir
 }
 
 task publishJme {
 	dependsOn obfuscate
-	doLast {
-		if (isMidlet()) {
-			def prefix = "${telcom}-${sp}-${archivesBaseName}"
-			def nowStr = new Date().format('yyMMdd-HHmm')
-			def destfile = "${obfuscate.destinationPath}/${prefix}-${nowStr}.zip"
-			ant.zip(destfile: destfile, basedir: obfuscate.destinationPath) {
-				include(name: uberJme.archiveName)
-				include(name: uberJme.jadName)
-			}
+	dependsOn copyPubJad
+}
+
+publishJme << {
+	if (isMidlet()) {
+		def prefix = "${telcom}-${sp}-${archivesBaseName}"
+		def nowStr = new Date().format('yyMMdd-HHmm')
+		def destfile = "${obfuscate.destinationDir}/${prefix}-${nowStr}.zip"
+		ant.zip(destfile: destfile, basedir: obfuscate.destinationDir) {
+			include(name: uberJme.archiveName)
+			include(name: createJad.jadName)
+		}
+	}
+}
+
+task copyTest(type: Copy) {
+	dependsOn createJad
+	from uberJme.archivePath
+	from createJad.jadPath
+	into "${buildDir}/iptv/test"
+	ext.jarPath = "$destinationDir/${uberJme.archiveName}"
+	ext.jadPath = "$destinationDir/${createJad.jadName}"
+}
+
+task appendJad {
+	dependsOn copyTest
+	inputs.file "${copyTest.jadPath}"
+	outputs.file "${copyTest.jadPath}"
+}
+
+appendJad << {
+	if (isMidlet()) {
+		if (file("${env.IGBT_HOME}/jads/${telcom}-${sp}.jad").exists()) {
+			def text = renderTemplateFile("${env.IGBT_HOME}/jads/${telcom}-${sp}.jad", props)
+			file(copyTest.jadPath).append(text.denormalize())
+		}
+		else {
+			def text = renderTemplateFile("${env.IGBT_HOME}/jads/${sp}.jad", props)
+			file(copyTest.jadPath).append(text.denormalize())
 		}
 	}
 }
 
 task testJme {
 	dependsOn test
-	dependsOn uberJme
-}
-
-testJme << {
-	if (isMidlet()) {
-		if (file("${env.IGBT_HOME}/jads/${telcom}-${sp}.jad").exists()) {
-			def text = renderTemplateFile("${env.IGBT_HOME}/jads/${telcom}-${sp}.jad", props)
-			file(uberJme.jadPath).append(text.denormalize())
-		}
-		else {
-			def text = renderTemplateFile("${env.IGBT_HOME}/jads/${sp}.jad", props)
-			file(uberJme.jadPath).append(text.denormalize())
-		}
-	}
+	dependsOn appendJad
 }
 
 testJme << {
 	ant.java(classname: 'org.microemu.app.Main', fork: true, spawn: true) {
 		arg(value: '--resizableDevice 640 530')
-		arg(value: uberJme.jadPath)
+		arg(value: copyTest.jadPath)
 		classpath {
 			pathelement(location: "${env.IGBT_HOME}/libs/microemulator.jar")
-			pathelement(location: uberJme.archivePath)
+			pathelement(location: copyTest.jarPath)
 		}
 	}
 }
