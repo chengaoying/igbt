@@ -37,13 +37,20 @@ def writeAppDesc(f) {
 	def file = f instanceof File ? f : file(f)
 	file.write("MIDlet-Version: 1.0.0\r\n")
 	file.append("MIDlet-Vendor: MIDlet Suite Vendor\r\n")
-	file.append("MIDlet-Jar-URL: ${uberJme.archiveName}\r\n")
 	file.append("MicroEdition-Configuration: CLDC-1.1\r\n")
 	file.append("MicroEdition-Profile: MIDP-2.0\r\n")
+	file.append("MIDlet-Jar-URL: ${uberJme.archiveName}\r\n")
 	file.append("MIDlet-Name: ${archivesBaseName} MIDlet Suite\r\n")
 	if (project.hasProperty('midlet')) {
 		file.append("MIDlet-1: ${archivesBaseName}MIDlet,,${midlet}\r\n")
 	}
+}
+
+def writeAppDesc2(f) {
+	def file = f instanceof File ? f : file(f)
+	writeAppDesc(f)
+	def jarSize = uberJme.archivePath.size()
+	file.append("MIDlet-Jar-Size: ${jarSize}\r\n")
 }
 
 def jadName(name) {
@@ -124,6 +131,17 @@ task uberJme(type: Jar) {
 	from preverify.destinationPath
 	from resJme.destinationDir
 	destinationDir = file("${buildDir}/iptv/uberjar")
+	manifest {
+		attributes("Manifest-Version": "1.0")
+		attributes("MIDlet-Version": "1.0.0")
+		attributes("MIDlet-Vendor": "MIDlet Suite Vendor")
+		attributes("MIDlet-Name": "${archivesBaseName} MIDlet Suite")
+		if (project.hasProperty('midlet')) {
+			attributes("MIDlet-1": "${archivesBaseName}MIDlet,,${midlet}")
+		}
+		attributes("MicroEdition-Configuration": "CLDC-1.1")
+		attributes("MicroEdition-Profile": "MIDP-2.0")
+	}
 }
 
 task createJad {
@@ -137,7 +155,7 @@ task createJad {
 }
 
 createJad << {
-	writeAppDesc(createJad.jadPath)
+	writeAppDesc2(createJad.jadPath)
 }
 
 task obfuscate(type: Exec) {
