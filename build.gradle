@@ -264,8 +264,24 @@ task helpJme << {
 	println "--------------------------------------------------------------------------------------"
 }
 
+task packageJavadoc(type: Jar, dependsOn: 'javadoc') {
+	from javadoc.destinationDir
+	classifier = 'javadoc'
+}
+
+task packageSources(type: Jar) {
+	from sourceSets.main.allSource
+	classifier = 'sources'
+}
+
 artifacts {
   jme uberJme.archivePath
+  jme (packageJavadoc) {
+	    type = 'javadoc' 
+	}
+	jme (packageSources) {
+	    //type = 'source' 
+	} 
 }
 
 uploadJme {
