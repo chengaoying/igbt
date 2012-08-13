@@ -14,6 +14,7 @@ serviceProviders = [
 	"ohyeah",
 	"the9",
 	"winside",
+	"dijoy"
 ]
 
 def paramStr():
@@ -48,6 +49,7 @@ def readServiceProvider():
 	print "1.欧耶平台"
 	print "2.九城平台"
 	print "3.掌世界平台"
+	print "4.鼎亿平台"
 	sp = serviceProviders[0]
 	while True:
 		text=raw_input("请输入[默认:1]：")
