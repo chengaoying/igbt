@@ -58,6 +58,23 @@ def jadName(name) {
 	str[0..<str.length()-1]+"d"
 }
 
+sourceSets {
+    main {
+        java {
+			def sss = validprop('srcDir')
+			if (sss) {
+				srcDir sss
+			}
+        }
+        resources {
+			def sss = validprop('resDir')
+            if (sss) {
+				srcDir sss
+			}
+        }
+    }
+}
+
 configurations {
 	jme
 	wtkProvide

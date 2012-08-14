@@ -1,7 +1,6 @@
 LoginID:  15045
 UserID:  15045
 AppID:  21114
-PayKey: 11A0948854D98F799A0D4CB888678563
 BuyService:  http://220.248.44.50:3280/common/php/business/apppay.php
 PlatformExt:  ExtendInfo
 ReturnUrl:  xxxx
