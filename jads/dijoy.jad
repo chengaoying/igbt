@@ -1,9 +1,11 @@
-LoginID:  igsuper00
-UserID:  igsuper00
-AppID:  App501
-BuyWebUrl:  http://pay.3dijoy.com
-BuyService:  http://buy.3dijoy.com
-RechargeUrl:  http://Recharge.3dijoy.com
+LoginID:  15045
+UserID:  15045
+AppID:  21114
+PayKey: 11A0948854D98F799A0D4CB888678563
+BuyService:  http://220.248.44.50:3280/common/php/business/apppay.php
 PlatformExt:  ExtendInfo
+ReturnUrl:  xxxx
+BuyWebUrl:  xxxx
+RechargeUrl: xxxx
 HomeUrl:  ${server}
-ReturnUrl:  http://return.3dijoy.com
+
