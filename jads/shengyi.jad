@@ -4,3 +4,7 @@ accountName: igsuper00
 userToken: xxxx
 server: ${server}
 appName: ${appName}
+cpId:1
+cpPassWord:BD55778DFE0
+userIdType:0
+shengyiProductID:10

@@ -1,4 +1,4 @@
-price: 2/5/10/20
+price:  ${price}
 userId: 9city0111
 accountName: 9e4ea54a0ef29bce
 userToken: xxxx

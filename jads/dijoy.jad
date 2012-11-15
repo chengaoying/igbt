@@ -6,5 +6,8 @@ PlatformExt:  ExtendInfo
 ReturnUrl:  xxxx
 BuyWebUrl:  xxxx
 RechargeUrl: xxxx
-HomeUrl:  ${server}
+HomeUrl:  xxxx
+loginUrl:  ${server}
+payKey: xxxx
+
 

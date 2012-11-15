@@ -7,6 +7,8 @@ telcomOperators = [
 	"telcomgd",
 	"telcomjs",
 	"telcomfj",
+	"telcomhn",
+	"tianweisz",
 	"telcomCommon",
 ]
 
@@ -14,7 +16,8 @@ serviceProviders = [
 	"ohyeah",
 	"the9",
 	"winside",
-	"dijoy"
+	"dijoy",
+	"shengyi"
 ]
 
 def paramStr():
@@ -26,7 +29,9 @@ def readTelcomOperator():
 	print "2.广东电信"
 	print "3.江苏电信"
 	print "4.福建电信"
-	print "5.其他电信"
+	print "5.湖南电信"
+	print "6.深圳天威"
+	print "7.其他电信"
 	telcom = telcomOperators[0]
 	while True:
 		text=raw_input("请输入[默认:1]：")
@@ -50,6 +55,7 @@ def readServiceProvider():
 	print "2.九城平台"
 	print "3.掌世界平台"
 	print "4.鼎亿平台"
+	print "5.盛翼平台"
 	sp = serviceProviders[0]
 	while True:
 		text=raw_input("请输入[默认:1]：")
