@@ -1,14 +1,12 @@
-price:  5/10/20
+price: ${price}
 appname: ${appName}
 loginurl: ${server}
-tvplat#gameid: 111
-tvplat#feeaccount:***
-tvplat#returnurl:***
-tvplat#numbercode:igsuper00
-tvplat#dwjvl:***
-tvplat#opcomkey:***
-tvplat#paysubway:***
-USER_TOKEN:***
-USER_GROUP_ID:***
-rechargeurl:http://192.168.10.253:8086/tvplat4/pay/pay_epibolyPayment.action?
+tvplat#feeaccount:gs50000
+tvplat#returnurl:
+tvplat#numbercode:43000011
+tvplat#dwjvl:NDMwMDAwMTErMjgwMTg0MDI=
+tvplat#opcomkey:gansu_dx
+tvplat#paysubway:1
+
+
 
