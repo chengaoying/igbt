@@ -1,6 +1,7 @@
 price: ${price}
 appname: ${appName}
 loginurl: ${server}
+buyURL: http://125.119.1.40:8086/tvplat4/pay/pay_epibolyPayment.action
 tvplat#feeaccount:gs50000
 tvplat#returnurl:
 tvplat#numbercode:43000011

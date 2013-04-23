@@ -89,6 +89,7 @@ repositories {
 dependencies {
 	wtkProvide ':cldcapi11:@jar'
 	wtkProvide ':midpapi20:@jar'
+	
 }
 
 compileJava {
