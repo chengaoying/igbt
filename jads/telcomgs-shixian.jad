@@ -1,13 +1,11 @@
-price: ${price}
 appname: ${appName}
 loginurl: ${server}
-buyURL: http://125.119.1.40:8086/tvplat4/pay/pay_epibolyPayment.action
-tvplat#feeaccount:gs50000
-tvplat#returnurl:
-tvplat#numbercode:43000011
-tvplat#dwjvl:NDMwMDAwMTErMjgwMTg0MDI=
-tvplat#opcomkey:gansu_dx
-tvplat#paysubway:1
-
-
-
+gameCode:cp03001
+feeAccount:gs50000
+numbercode:43000011
+dwjtvkey:NDMwMDAwMTErMjgwMTg0MDI=
+paysubway:1
+vl_zonekey:anhui
+opcomtoken:0123456789
+opcompara:<ugid>null</ugid>
+vl_token:uw5mmfYrOIfiuOSBgXwq5zxxlcgJt0heLj9cYK4ldzTZNYIA

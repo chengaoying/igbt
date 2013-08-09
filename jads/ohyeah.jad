@@ -4,4 +4,4 @@ accountName: igsuper00
 userToken: xxxx
 server: ${server}
 appName: ${appName}
-gameid: ${gameid}
+gameid: 100

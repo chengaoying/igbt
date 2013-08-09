@@ -34,7 +34,7 @@ def readTelcomOperator():
 	print "4.海南电信"
 	print "5.湖南电信"
 	print "6.深圳天威"
-	print "7.甘肃电信（还未接入）"
+	print "7.甘肃电信"
 	print "8.安徽电信"
 	print "9.其他电信（新疆、福建）"
 	telcom = telcomOperators[0]
@@ -61,7 +61,7 @@ def readServiceProvider():
 	print "3.掌世界平台"
 	print "4.鼎亿平台"
 	print "5.盛翼平台"
-	print "6.杭州视线（还未接入）"
+	print "6.杭州视线"
 	sp = serviceProviders[0]
 	while True:
 		text=raw_input("请输入[默认:1]：")
